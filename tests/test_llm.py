@@ -120,3 +120,67 @@ def test_claude_picks_model_by_task():
 
     models = [kw["model"] for kw in client.messages.kwargs]
     assert models == [config.CLAUDE_EXTRACT_MODEL, config.CLAUDE_BRIEF_MODEL]
+
+
+class _FlakyModels:
+    """Raises each queued error in turn, then answers normally."""
+
+    def __init__(self, errors):
+        self.errors = list(errors)
+        self.calls = 0
+
+    def generate_content(self, **kwargs):
+        self.calls += 1
+        if self.errors:
+            raise self.errors.pop(0)
+        return _GeminiResponse()
+
+
+class _FlakyClient:
+    def __init__(self, errors):
+        self.models = _FlakyModels(errors)
+
+
+def _busy():
+    return errors.ServerError(
+        503, {"error": {"code": 503, "message": "high demand", "status": "UNAVAILABLE"}}
+    )
+
+
+def test_gemini_retries_when_busy_then_succeeds():
+    client = _FlakyClient([_busy(), _busy()])
+    waits = []
+    llm = GeminiLLM("key", "m", client=client, sleep=waits.append)
+
+    assert llm.complete("sys", "usr") == '{"a": 1}'
+    assert client.models.calls == 3
+    assert waits == [2.0, 6.0]
+
+
+def test_gemini_gives_up_after_three_busy_errors():
+    client = _FlakyClient([_busy(), _busy(), _busy()])
+    llm = GeminiLLM("key", "m", client=client, sleep=lambda s: None)
+
+    with pytest.raises(LLMError) as caught:
+        llm.complete("sys", "usr")
+
+    assert not isinstance(caught.value, QuotaError)
+    assert "busy" in str(caught.value).lower()
+    assert client.models.calls == 3
+
+
+def test_gemini_does_not_retry_quota_or_other_errors():
+    quota = errors.ClientError(
+        429, {"error": {"code": 429, "message": "quota", "status": "RESOURCE_EXHAUSTED"}}
+    )
+    missing = errors.ClientError(
+        404, {"error": {"code": 404, "message": "no such model", "status": "NOT_FOUND"}}
+    )
+    for error, expected in [(quota, QuotaError), (missing, LLMError)]:
+        client = _FlakyClient([error])
+        llm = GeminiLLM("key", "m", client=client, sleep=lambda s: None)
+
+        with pytest.raises(expected):
+            llm.complete("sys", "usr")
+
+        assert client.models.calls == 1

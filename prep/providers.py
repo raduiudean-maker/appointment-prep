@@ -1,7 +1,9 @@
 """Gemini and Claude implementations of the LLM interface, and get_llm()."""
 import os
+import time
 import tomllib
 from pathlib import Path
+from typing import Callable
 
 from prep import config
 from prep.llm import LLM, LLMError, QuotaError, Task
@@ -9,21 +11,46 @@ from prep.llm import LLM, LLMError, QuotaError, Task
 _REPO_ROOT = Path(__file__).resolve().parent.parent
 
 
+# Seconds to wait before each retry when the model is busy. Three tries in total.
+_BUSY_RETRY_DELAYS = (2.0, 6.0)
+
+
+def _status(exc: Exception):
+    return getattr(exc, "code", None) or getattr(exc, "status_code", None)
+
+
+def _is_busy(exc: Exception) -> bool:
+    return _status(exc) == 503 or "UNAVAILABLE" in str(exc)
+
+
 def _raise_mapped(provider: str, exc: Exception) -> None:
-    status = getattr(exc, "code", None) or getattr(exc, "status_code", None)
-    if status == 429 or "RESOURCE_EXHAUSTED" in str(exc):
+    if _status(exc) == 429 or "RESOURCE_EXHAUSTED" in str(exc):
         raise QuotaError("Daily AI limit reached.") from exc
+    if _is_busy(exc):
+        raise LLMError(f"{provider} is busy right now. Please try again in a minute.") from exc
     raise LLMError(f"{provider} call failed: {exc}") from exc
 
 
+def _call_with_retry(provider: str, fn: Callable, sleep: Callable[[float], None]):
+    """Run fn(). Retry only when the model is busy (503); every other error is final."""
+    for delay in (*_BUSY_RETRY_DELAYS, None):
+        try:
+            return fn()
+        except Exception as exc:
+            if delay is None or not _is_busy(exc):
+                _raise_mapped(provider, exc)
+            sleep(delay)
+
+
 class GeminiLLM:
-    def __init__(self, api_key: str, model: str, client=None):
+    def __init__(self, api_key: str, model: str, client=None, sleep=time.sleep):
         if client is None:
             from google import genai
 
             client = genai.Client(api_key=api_key)
         self._client = client
         self._model = model
+        self._sleep = sleep
 
     def complete(
         self, system: str, user: str, max_tokens: int = 1500, task: Task = "extract"
@@ -35,25 +62,27 @@ class GeminiLLM:
         settings = types.GenerateContentConfig(
             system_instruction=system, response_mime_type="application/json"
         )
-        try:
-            response = self._client.models.generate_content(
+        response = _call_with_retry(
+            "Gemini",
+            lambda: self._client.models.generate_content(
                 model=self._model, contents=user, config=settings
-            )
-        except Exception as exc:
-            _raise_mapped("Gemini", exc)
+            ),
+            self._sleep,
+        )
         return response.text or ""
 
     def transcribe(self, audio_bytes: bytes, mime_type: str = "audio/wav") -> str:
         from google.genai import types
 
         audio = types.Part.from_bytes(data=audio_bytes, mime_type=mime_type)
-        try:
-            response = self._client.models.generate_content(
+        response = _call_with_retry(
+            "Gemini",
+            lambda: self._client.models.generate_content(
                 model=self._model,
                 contents=["Transcribe this voice note verbatim. Return only the text.", audio],
-            )
-        except Exception as exc:
-            _raise_mapped("Gemini", exc)
+            ),
+            self._sleep,
+        )
         return (response.text or "").strip()
 
 
