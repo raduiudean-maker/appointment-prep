@@ -1,4 +1,13 @@
 """Provider and model ids, paths, constants. Keep every model id here and nowhere else."""
+from pathlib import Path
+
+REPO_ROOT = Path(__file__).resolve().parent.parent
+
+
+def repo_path(path: str) -> Path:
+    """Resolve a repo-relative path, so scripts and the app work from any folder."""
+    p = Path(path)
+    return p if p.is_absolute() else REPO_ROOT / p
 
 PROVIDER = "gemini"  # "gemini" or "claude"
 

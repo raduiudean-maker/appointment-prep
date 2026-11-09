@@ -1,4 +1,4 @@
-"""Dataclasses shared across the app. Claim and VisitBrief are added in Task 5."""
+"""Dataclasses shared across the app."""
 from dataclasses import dataclass, field
 from typing import Literal
 
@@ -21,3 +21,20 @@ class Extraction:
     triggers: list[str] = field(default_factory=list)
     medications: list[str] = field(default_factory=list)
     sleep_hours: float | None = None
+
+
+@dataclass
+class Claim:
+    text: str
+    source_ids: list[int]  # ids of the notes that support this statement
+
+
+@dataclass
+class VisitBrief:
+    summary: str  # at most 2 sentences
+    timeline: list[Claim]
+    patterns: list[Claim]
+    questions: list[str]  # exactly 3
+    red_flags: list[str]  # from the rule-based check, never from the model
+    note_count: int
+    date_range: tuple[str, str]
