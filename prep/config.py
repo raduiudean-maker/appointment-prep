@@ -3,7 +3,7 @@
 PROVIDER = "gemini"  # "gemini" or "claude"
 
 # Model id that passed scripts/smoke_test.py (a Flash model with a free tier).
-GEMINI_MODEL = "gemini-3-8-flash"
+GEMINI_MODEL = "gemini-3.8-flash"
 
 CLAUDE_EXTRACT_MODEL = "claude-haiku-5-5"
 CLAUDE_BRIEF_MODEL = "claude-sonnet-5-5"
