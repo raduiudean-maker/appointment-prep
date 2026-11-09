@@ -23,3 +23,8 @@ One short entry per day: what I built, what broke, what I learned. This feeds th
 
 ## 2026-11-09 (model id fix)
 - The first config used `gemini-3-8-flash` and got a 404. The id that passed the smoke test, found in the PowerShell history, is `gemini-3.8-flash` (with a dot). Learned: copy IDs from a command that worked, not from a display name.
+
+## 2026-11-09 (Task 5)
+- Task 5 done: `prep/brief.py` builds the visit brief from the notes. Every pattern and timeline line carries the ids of the notes it came from. Invented ids are dropped, and a claim with no real source is dropped. Red flags come from the rules, never from the model. 15 new tests, all with fake AI responses.
+- The prompt includes the weekday of each note, because the model cannot work out "mostly weekdays" from raw dates.
+- The demo patient's brief is saved to `data/demo_brief.json` (1 real call) and loaded from disk afterwards. Its note ids are re-mapped through each note's date, so it still works if the database numbers the notes differently.
