@@ -2,9 +2,8 @@
 
 PROVIDER = "gemini"  # "gemini" or "claude"
 
-# Copy the exact model id from Google AI Studio (a Flash model with a free tier).
-# Do not guess it. Leave empty until you have checked.
-GEMINI_MODEL = ""
+# Model id that passed scripts/smoke_test.py (a Flash model with a free tier).
+GEMINI_MODEL = "gemini-3-8-flash"
 
 CLAUDE_EXTRACT_MODEL = "claude-haiku-5-5"
 CLAUDE_BRIEF_MODEL = "claude-sonnet-5-5"
