@@ -28,3 +28,10 @@ One short entry per day: what I built, what broke, what I learned. This feeds th
 - Task 5 done: `prep/brief.py` builds the visit brief from the notes. Every pattern and timeline line carries the ids of the notes it came from. Invented ids are dropped, and a claim with no real source is dropped. Red flags come from the rules, never from the model. 15 new tests, all with fake AI responses.
 - The prompt includes the weekday of each note, because the model cannot work out "mostly weekdays" from raw dates.
 - The demo patient's brief is saved to `data/demo_brief.json` (1 real call) and loaded from disk afterwards. Its note ids are re-mapped through each note's date, so it still works if the database numbers the notes differently.
+
+## 2026-11-09 (busy-model retry)
+- Gemini 503 "high demand" is now retried up to 3 tries (waits of 2 s and 6 s). A quota error (429) is never retried and shows the daily-limit message.
+
+## 2026-11-09 (Task 6)
+- Task 6 done: `prep/transcribe.py`, `prep/pdf.py`, `prep/ingest.py` and the Streamlit app (consent gate, Diary, Add a note, Visit brief). The save-a-note steps live in `ingest.py` so they can be tested without Streamlit: safety check first, then transcription, then save, then extraction. If any AI step fails, the note is still kept.
+- The PDF uses the built-in Latin-1 fonts, so punctuation like the em dash is mapped to plain characters. Learned: check what characters a PDF font supports before trusting it with real text.
