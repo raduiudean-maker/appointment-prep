@@ -53,7 +53,7 @@ def render(conn) -> None:
             st.session_state["brief"] = (cached, "Pre-generated example for the demo patient")
         else:
             try:
-                with st.spinner("Preparing your brief…"):
+                with st.spinner("Preparing your brief. This can take up to a minute…"):
                     b = build_brief(get_llm(), notes, store.get_extractions(conn))
                 st.session_state["brief"] = (b, None)
             except NotEnoughNotes as exc:

@@ -184,3 +184,16 @@ def test_gemini_does_not_retry_quota_or_other_errors():
             llm.complete("sys", "usr")
 
         assert client.models.calls == 1
+
+
+def test_gemini_thinking_level_is_sent_only_when_configured(monkeypatch):
+    from prep import config
+
+    client = _GeminiClient()
+    llm = GeminiLLM("key", "m", client=client)
+    llm.complete("s", "u")
+    assert client.models.kwargs["config"].thinking_config is None
+
+    monkeypatch.setattr(config, "GEMINI_THINKING_LEVEL", "low")
+    llm.complete("s", "u")
+    assert str(client.models.kwargs["config"].thinking_config.thinking_level).endswith("LOW")

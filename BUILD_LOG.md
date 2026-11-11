@@ -35,3 +35,6 @@ One short entry per day: what I built, what broke, what I learned. This feeds th
 ## 2026-11-09 (Task 6)
 - Task 6 done: `prep/transcribe.py`, `prep/pdf.py`, `prep/ingest.py` and the Streamlit app (consent gate, Diary, Add a note, Visit brief). The save-a-note steps live in `ingest.py` so they can be tested without Streamlit: safety check first, then transcription, then save, then extraction. If any AI step fails, the note is still kept.
 - The PDF uses the built-in Latin-1 fonts, so punctuation like the em dash is mapped to plain characters. Learned: check what characters a PDF font supports before trusting it with real text.
+
+## 2026-11-11 (slow brief)
+- The brief is one big AI call, and a "thinking" model can spend a long time reasoning before it answers. Added an optional `GEMINI_THINKING_LEVEL` in `prep/config.py` (default off) and a "can take up to a minute" message. The demo patient's brief is read from disk once `precompute_brief.py` has run, so it opens instantly.

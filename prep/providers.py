@@ -62,6 +62,10 @@ class GeminiLLM:
         settings = types.GenerateContentConfig(
             system_instruction=system, response_mime_type="application/json"
         )
+        if config.GEMINI_THINKING_LEVEL:
+            settings.thinking_config = types.ThinkingConfig(
+                thinking_level=config.GEMINI_THINKING_LEVEL
+            )
         response = _call_with_retry(
             "Gemini",
             lambda: self._client.models.generate_content(
